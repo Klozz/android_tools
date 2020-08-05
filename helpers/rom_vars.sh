@@ -54,12 +54,14 @@ for var in "$@"; do
     fi
 
     # Set variables
-    if grep -q "odm.brand=" "$CAT_FILE"; then
+    if grep -q "ro.product.odm.manufacturer=" "$CAT_FILE"; then
+        BRAND_TEMP=$( cat "$CAT_FILE" | grep "ro.product.odm.manufacturer" | sed "s|.*=||g" | head -n 1 )
+    elif grep -q "ro.product.product.manufacturer=" "$CAT_FILE"; then
+        BRAND_TEMP=$( cat "$CAT_FILE" | grep "ro.product.product.manufacturer" | sed "s|.*=||g" | head -n 1 )
+    elif grep -q "odm.brand=" "$CAT_FILE"; then
         BRAND_TEMP=$( cat "$CAT_FILE" | grep "ro.product" | grep "odm.brand=" | sed "s|.*=||g" | head -n 1 )
     elif grep -q "brand=" "$CAT_FILE"; then
         BRAND_TEMP=$( cat "$CAT_FILE" | grep "ro.product" | grep "brand=" | sed "s|.*=||g" | head -n 1 )
-    elif grep -q "ro.product.odm.manufacturer=" "$CAT_FILE"; then
-        BRAND_TEMP=$( cat "$CAT_FILE" | grep "ro.product.odm.manufacturer" | sed "s|.*=||g" | head -n 1 )
     elif grep -q "manufacturer=" "$CAT_FILE"; then
         BRAND_TEMP=$( cat "$CAT_FILE" | grep "ro.product" | grep "manufacturer=" | sed "s|.*=||g" | head -n 1 )
     fi
@@ -68,17 +70,20 @@ for var in "$@"; do
         DEVICE=$( cat "$CAT_FILE" | grep "ro.vivo.product.release.name=" | sed "s|.*=||g" | head -n 1 )
     elif grep -q "ro.vendor.product.oem=" "$CAT_FILE"; then
         DEVICE=$( cat "$CAT_FILE" | grep "ro.vendor.product.oem=" | sed "s|.*=||g" | head -n 1 )
+    elif grep -q "ro.product.vendor.device=" "$CAT_FILE"; then
+        DEVICE=$( cat "$CAT_FILE" | grep "ro.product.vendor.device=" | sed "s|.*=||g" | head -n 1 )
     elif grep -q "odm.device=" "$CAT_FILE"; then
         DEVICE=$( cat "$CAT_FILE" | grep "odm.device=" | sed "s|.*=||g" | head -n 1 )
     elif grep -q "device=" "$CAT_FILE" && [[ "$BRAND" != "google" ]]; then
-        DEVICE=$( cat "$CAT_FILE" | grep "ro.product" | grep "device=" | sed "s|.*=||g" | sed "s|ASUS_||g" | head -n 1 )
+        DEVICE=$( cat "$CAT_FILE" | grep "ro.product" | grep "device=" | sed "s|.*=||g" | head -n 1 )
     elif grep -q "ro.product.system.name" "$CAT_FILE" && [[ "$BRAND" != "google" ]]; then
-        DEVICE=$( cat "$CAT_FILE" | grep "ro.product.system.name=" | sed "s|.*=||g" | sed "s|ASUS_||g" | head -n 1 )
+        DEVICE=$( cat "$CAT_FILE" | grep "ro.product.system.name=" | sed "s|.*=||g" | head -n 1 )
     fi
-    [[ -z "$DEVICE" ]] && DEVICE=$( cat "$CAT_FILE" | grep "ro.build" | grep "product=" | sed "s|.*=||g" | sed "s|ASUS_||g" | head -n 1 )
+    [[ -z "$DEVICE" ]] && DEVICE=$( cat "$CAT_FILE" | grep "ro.build" | grep "product=" | sed "s|.*=||g" | head -n 1 )
     [[ -z "$DEVICE" ]] && DEVICE=$( cat "$CAT_FILE" | grep "ro." | grep "build.fingerprint=" | sed "s|.*=||g" | head -n 1 | cut -d : -f1 | rev | cut -d / -f1 | rev )
     [[ -z "$DEVICE" ]] && DEVICE=$( cat "$CAT_FILE" | grep "ro.target_product=" | sed "s|.*=||g" | head -n 1 | cut -d - -f1 )
     [[ -z "$DEVICE" ]] && DEVICE=$( cat "$CAT_FILE" | grep "build.fota.version=" | sed "s|.*=||g" | sed "s|WW_||1" | head -n 1 | cut -d - -f1 )
+    DEVICE=$( echo ${DEVICE} | sed "s|ASUS_||g" )
     VERSION=$( cat "$CAT_FILE" | grep "build.version.release=" | sed "s|.*=||g" | head -c 2 | head -n 1 )
     re='^[0-9]+$'
     if ! [[ $VERSION =~ $re ]] ; then
@@ -120,12 +125,24 @@ for var in "$@"; do
     PLATFORM=$( cat "$CAT_FILE" | grep "ro.board.platform" | sed "s|.*=||g" | head -n 1 )
     SECURITY_PATCH=$( cat "$CAT_FILE" | grep "build.version.security_patch=" | sed "s|.*=||g" | head -n 1 )
 
+    # Date
+    if grep -q "ro.system.build.date=" "$CAT_FILE"; then
+        DATE=$( cat "$CAT_FILE" | grep "ro.system.build.date=" | sed "s|.*=||g" | head -n 1 )
+    elif grep -q "ro.vendor.build.date=" "$CAT_FILE"; then
+        DATE=$( cat "$CAT_FILE" | grep "ro.vendor.build.date=" | sed "s|.*=||g" | head -n 1 )
+    elif grep -q "ro.build.date=" "$CAT_FILE"; then
+        DATE=$( cat "$CAT_FILE" | grep "ro.build.date=" | sed "s|.*=||g" | head -n 1 )
+    elif grep -q "ro.bootimage.build.date=" "$CAT_FILE"; then
+        DATE=$( cat "$CAT_FILE" | grep "ro.bootimage.build.date=" | sed "s|.*=||g" | head -n 1 )
+    fi
+
+    BRANCH=$(echo $DESCRIPTION $DATE | tr ' ' '-' | tr ':' '-')
     TOPIC1=$(echo $BRAND | tr '[:upper:]' '[:lower:]' | tr -dc '[[:print:]]' | tr '_' '-' | cut -c 1-35)
     TOPIC2=$(echo $PLATFORM | tr '[:upper:]' '[:lower:]' | tr -dc '[[:print:]]' | tr '_' '-' | cut -c 1-35)
     TOPIC3=$(echo $DEVICE | tr '[:upper:]' '[:lower:]' | tr -dc '[[:print:]]' | tr '_' '-' | cut -c 1-35)
 
     # Display var's
-    declare -a arr=("BRAND" "DEVICE" "DESCRIPTION" "FINGERPRINT" "MODEL" "PLATFORM" "SECURITY_PATCH" "VERSION" "FLAVOR" "ID" "INCREMENTAL" "TAGS")
+    declare -a arr=("BRAND" "DEVICE" "DESCRIPTION" "FINGERPRINT" "MODEL" "PLATFORM" "SECURITY_PATCH" "VERSION" "DATE" "FLAVOR" "ID" "INCREMENTAL" "TAGS" "BRANCH")
     for i in "${arr[@]}"; do printf "$i: ${!i}\n"; done
     # Cleanup
     rm -rf $PROJECT_DIR/working/system_build* $PROJECT_DIR/working/*prop $PROJECT_DIR/working/all_files.txt

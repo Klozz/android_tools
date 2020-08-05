@@ -326,11 +326,7 @@ for list in $blobs_list ; do
     printf "\n# $list\n" >> $PROJECT_DIR/working/proprietary-files-staging.txt
     for line in $file_lines ; do
         if cat $PROJECT_DIR/working/rom_all.txt | grep "$line"; then
-            if echo "$line" | grep -iE "vendor.qti.hardware.fm@1.0.so" | grep -v "vendor/"; then
-                echo "-$line" >> $PROJECT_DIR/working/proprietary-files-staging.txt
-            elif echo "$line" | grep -iE "priv-app/imssettings/imssettings.apk"; then
-                echo "-$line" >> $PROJECT_DIR/working/proprietary-files-staging.txt
-            elif echo "$line" | grep -iE "app/|lib64/com.quicinc.cne|libaudio_log_utils.so|libgpustats.so|libsdm-disp-vndapis.so|libthermalclient.so|WfdCommon.jar|libantradio.so|libsdm-disp-apis.so"; then
+            if echo "$line" | grep -iE "libplatformconfig|apk|jar"; then
                 echo "-$line" >> $PROJECT_DIR/working/proprietary-files-staging.txt
             else
                 echo "$line" >> $PROJECT_DIR/working/proprietary-files-staging.txt
@@ -339,19 +335,40 @@ for list in $blobs_list ; do
     done
 done
 
-# List all vendor blobs
-cat $PROJECT_DIR/working/rom_all.txt | grep "vendor/" | sort -u > $PROJECT_DIR/working/staging.txt
+# List all /system_ext blobs
+cat $PROJECT_DIR/working/rom_all.txt | grep "system_ext/" | sort -u > $PROJECT_DIR/working/staging.txt
+# Clean up /system_ext
+file_lines=`cat $PROJECT_DIR/helpers/lists/remove.txt`
+for line in $file_lines; do
+    sed -i "s|$line.*||g" $PROJECT_DIR/working/staging.txt
+done
+sed -i '/^$/d' $PROJECT_DIR/working/staging.txt
+# Add missing /system_ext blobs as misc
+printf "\n# Misc\n" >> $PROJECT_DIR/working/proprietary-files-staging.txt
+file_lines=`cat $PROJECT_DIR/working/staging.txt | sort -f`
+for line in $file_lines; do
+    # Missing
+    if ! grep -q "$line" $PROJECT_DIR/working/proprietary-files-staging.txt; then
+        if ! grep -q "$line" $PROJECT_DIR/helpers/lists/ignore.txt; then
+            if echo "$line" | grep -iE "apk|jar"; then
+                echo "-$line" >> $PROJECT_DIR/working/proprietary-files-staging.txt
+            else
+                echo "$line" >> $PROJECT_DIR/working/proprietary-files-staging.txt
+            fi
+        fi
+    fi
+done
 
-# Clean up misc
+# List all /vendor blobs
+cat $PROJECT_DIR/working/rom_all.txt | grep "vendor/" | sort -u > $PROJECT_DIR/working/staging.txt
+# Clean up /vendor
 file_lines=`cat $PROJECT_DIR/helpers/lists/remove.txt`
 for line in $file_lines; do
     sed -i "s|$line.*||g" $PROJECT_DIR/working/staging.txt
 done
 sed -i "s|vendor/bin/.*\.sh||g" $PROJECT_DIR/working/staging.txt
 sed -i '/^$/d' $PROJECT_DIR/working/staging.txt
-
 # Add missing /vendor blobs as misc
-printf "\n# Misc\n" >> $PROJECT_DIR/working/proprietary-files-staging.txt
 file_lines=`cat $PROJECT_DIR/working/staging.txt | sort -f`
 for line in $file_lines; do
     # Missing

@@ -10,7 +10,7 @@
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null && pwd )"
 
 # Create some folders
-mkdir -p "$PROJECT_DIR/dumps/" "$PROJECT_DIR/working"
+mkdir -p "$PROJECT_DIR/dumps/" "$PROJECT_DIR/working" "$PROJECT_DIR/input"
 
 # clean up
 if [ "$1" == "y" ]; then
@@ -21,10 +21,13 @@ fi
 GITHUB_EMAIL="$(git config --get user.email)"
 GITHUB_USER="$(git config --get user.name)"
 [[ -z "$DUMMYDT" ]] && DUMMYDT="n"
-[[ -z "$DUMPYARA" ]] && DUMPYARA="n"
+[[ -z "$DUMPPUSH" ]] && DUMPPUSH="n"
 [[ -z "$ORGMEMBER" ]] && ORGMEMBER="n"
 [[ -z "$VERBOSE" ]] && VERBOSE="y"
 export LC_ALL=C make
+
+# extract-ikconfig
+[[ ! -e ${PROJECT_DIR}/helpers/extract-ikconfig ]] && curl https://raw.githubusercontent.com/torvalds/linux/master/scripts/extract-ikconfig > ${PROJECT_DIR}/helpers/extract-ikconfig
 
 function dlrom() {
     echo "Downloading file"
